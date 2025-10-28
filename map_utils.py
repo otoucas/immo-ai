@@ -1,7 +1,6 @@
 import leafmap.foliumap as leafmap
 import folium
 import requests
-import json
 from api_dvf import get_last_sale_price
 from streamlit_folium import st_folium
 from folium.plugins import Draw
@@ -56,4 +55,36 @@ def create_map(df, show_cadastral=False, show_communes=False, selected_codes_pos
         )
 
     # Ajouter les limites communales
-    if show_c
+    if show_communes and selected_codes_postaux:
+        for code in selected_codes_postaux:
+            geojson = get_communes_geojson(code)
+            if geojson:
+                folium.GeoJson(
+                    geojson,
+                    name=f"Limites communales ({code})",
+                    style_function=lambda x: {"color": "red", "weight": 2, "fillOpacity": 0},
+                ).add_to(m)
+
+    # Ajouter un outil de dessin pour sélectionner des zones
+    Draw(
+        export=True,
+        position="topleft",
+        draw_options={
+            "polyline": False,
+            "polygon": True,
+            "rectangle": True,
+            "circle": False,
+            "marker": False,
+        },
+    ).add_to(m)
+
+    return m
+
+def extract_postal_codes_from_geojson(geojson):
+    """Extrait les codes postaux depuis un GeoJSON (zone dessinée)."""
+    if geojson["geometry"]["type"] == "Polygon":
+        coords = geojson["geometry"]["coordinates"][0]
+        centroid_lat = sum([c[1] for c in coords]) / len(coords)
+        centroid_lon = sum([c[0] for c in coords]) / len(coords)
+        return reverse_geocode(centroid_lat, centroid_lon)
+    return None
