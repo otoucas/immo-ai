@@ -1,13 +1,16 @@
 import streamlit as st
 from api_ademe import fetch_dpe_data
-from map_utils import create_map, extract_postal_codes_from_geojson
+from map_utils import create_map, reverse_geocode
 from filter_utils import load_filters, save_filters, delete_filter
 import pandas as pd
-import json
 
 # Configuration de la page
 st.set_page_config(layout="wide")
 st.title("🏡 Recherche immobilière avancée")
+
+# Initialiser les codes postaux dans session_state
+if "codes_postaux" not in st.session_state:
+    st.session_state.codes_postaux = ["01"]
 
 # Charger les filtres sauvegardés
 saved_filters = load_filters()
@@ -24,12 +27,13 @@ with st.sidebar:
 
     if filter_name != "Nouveau filtre":
         current_filter = saved_filters[filter_name]
+        st.session_state.codes_postaux = current_filter.get("codes_postaux", ["01"])
     else:
         current_filter = {
             "dpe": ["D"],
             "ges": ["D"],
             "surface": [210, 217],
-            "codes_postaux": ["01"],
+            "codes_postaux": st.session_state.codes_postaux,
         }
 
     # Filtres interactifs
@@ -49,10 +53,6 @@ with st.sidebar:
         max_value=500,
         value=current_filter.get("surface", [210, 217]),
     )
-    codes_postaux = st.tags_input(
-        "Codes postaux",
-        value=current_filter.get("codes_postaux", ["01"]),
-    )
 
     # Options d'affichage
     show_cadastral = st.checkbox("Afficher les parcelles cadastrales", value=True)
@@ -66,7 +66,7 @@ with st.sidebar:
                 "dpe": dpe_filter,
                 "ges": ges_filter,
                 "surface": list(surface_range),
-                "codes_postaux": list(codes_postaux),
+                "codes_postaux": st.session_state.codes_postaux,
             }
             save_filters(saved_filters)
             st.success(f"Filtre '{new_filter_name}' sauvegardé !")
@@ -87,13 +87,13 @@ st.sidebar.markdown(f"""
 - **DPE:** {', '.join(dpe_filter)}
 - **GES:** {', '.join(ges_filter)}
 - **Surface:** {surface_range[0]} - {surface_range[1]} m²
-- **Codes postaux:** {', '.join(codes_postaux)}
+- **Codes postaux:** {', '.join(st.session_state.codes_postaux)}
 """)
 
 # Récupérer les données DPE/GES
 with st.spinner("Chargement des données..."):
     df = pd.DataFrame()
-    for code in codes_postaux:
+    for code in st.session_state.codes_postaux:
         df_code = fetch_dpe_data(
             etiquette_dpe=",".join(dpe_filter),
             etiquette_ges=",".join(ges_filter),
@@ -116,31 +116,20 @@ else:
         df,
         show_cadastral=show_cadastral,
         show_communes=show_communes,
-        selected_codes_postaux=codes_postaux,
+        selected_codes_postaux=st.session_state.codes_postaux,
     )
 
-    # Afficher la carte avec Streamlit et gérer les événements
+    # Afficher la carte avec Streamlit et gérer les clics
     map_data = st_folium(m, width=700, height=500)
 
-    # Si une zone a été dessinée, extraire le code postal
-    if map_data.get("last_active_drawing"):
-        geojson = map_data["last_active_drawing"]
-        postal_code = extract_postal_codes_from_geojson(geojson)
-        if postal_code and postal_code not in codes_postaux:
-            st.session_state.codes_postaux = list(codes_postaux) + [postal_code]
-            st.experimental_rerun()
-
-    # Si un clic a été détecté, extraire le code postal
+    # Gérer les clics pour ajouter des codes postaux
     if map_data.get("last_clicked"):
-        lat, lon = map_data["last_clicked"]["lat"], map_data["last_clicked"]["lng"]
+        lat = map_data["last_clicked"]["lat"]
+        lon = map_data["last_clicked"]["lng"]
         postal_code = reverse_geocode(lat, lon)
-        if postal_code and postal_code not in codes_postaux:
-            st.session_state.codes_postaux = list(codes_postaux) + [postal_code]
+        if postal_code and postal_code not in st.session_state.codes_postaux:
+            st.session_state.codes_postaux = list(st.session_state.codes_postaux) + [postal_code]
             st.experimental_rerun()
-
-# Mise à jour des codes postaux après un clic ou un dessin
-if "codes_postaux" in st.session_state:
-    codes_postaux = st.session_state.codes_postaux
 
 # Pied de page
 st.markdown("---")
