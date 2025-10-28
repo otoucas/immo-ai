@@ -7,16 +7,24 @@ from streamlit_folium import st_folium
 from folium.plugins import Draw
 
 def get_communes_geojson(code_postal):
-    """Récupère les limites communales pour un code postal donné (via API Nominatim ou IGN)."""
-    # Exemple avec l'API Nominatim (OpenStreetMap)
-    url = f"https://nominatim.openstreetmap.org/search?postalcode={code_postal}&country=France&format=geojson"
-    response = requests.get(url)
+    """Récupère les limites communales pour un code postal donné (via Nominatim)."""
+    url = f"https://nominatim.openstreetmap.org/search?postalcode={code_postal}&country=France&format=geojson&polygon_geojson=1"
+    response = requests.get(url, headers={"User-Agent": "immo-ai/1.0"})
     if response.status_code == 200:
         return response.json()
     return None
 
+def reverse_geocode(lat, lon):
+    """Récupère le code postal à partir de coordonnées (lat, lon) via Nominatim."""
+    url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json&addressdetails=1"
+    response = requests.get(url, headers={"User-Agent": "immo-ai/1.0"})
+    if response.status_code == 200:
+        data = response.json()
+        return data.get("address", {}).get("postcode")
+    return None
+
 def create_map(df, show_cadastral=False, show_communes=False, selected_codes_postaux=[]):
-    """Crée une carte avec marqueurs, parcelles cadastrales et limites communales."""
+    """Crée une carte avec marqueurs, parcelles cadastrales, et limites communales."""
     m = leafmap.Map(center=[46, 2], zoom=6)
     m.add_basemap("SATELLITE")
 
@@ -47,18 +55,5 @@ def create_map(df, show_cadastral=False, show_communes=False, selected_codes_pos
             transparent=True,
         )
 
-    # Ajouter les limites communales pour les codes postaux sélectionnés
-    if show_communes and selected_codes_postaux:
-        for code in selected_codes_postaux:
-            geojson = get_communes_geojson(code)
-            if geojson:
-                folium.GeoJson(
-                    geojson,
-                    name=f"Limites communales ({code})",
-                    style_function=lambda x: {"color": "red", "weight": 2, "fillOpacity": 0},
-                ).add_to(m)
-
-    # Ajouter un outil de dessin pour sélectionner des zones (clics)
-    Draw(export=True).add_to(m)
-
-    return m
+    # Ajouter les limites communales
+    if show_c
