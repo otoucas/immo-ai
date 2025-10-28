@@ -1,4 +1,4 @@
-import leafmap.foliumap as leafmap
+import leafmap
 import folium
 import requests
 from api_dvf import get_last_sale_price
