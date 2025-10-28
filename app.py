@@ -1,13 +1,13 @@
 import streamlit as st
 from api_ademe import fetch_dpe_data
-from map_utils import create_map, get_communes_geojson
+from map_utils import create_map, extract_postal_codes_from_geojson
 from filter_utils import load_filters, save_filters, delete_filter
 import pandas as pd
 import json
 
 # Configuration de la page
 st.set_page_config(layout="wide")
-st.title("🏡 Recherche immobilière avancée (DPE/GES + Prix + Cadastral + Communes)")
+st.title("🏡 Recherche immobilière avancée")
 
 # Charger les filtres sauvegardés
 saved_filters = load_filters()
@@ -66,7 +66,7 @@ with st.sidebar:
                 "dpe": dpe_filter,
                 "ges": ges_filter,
                 "surface": list(surface_range),
-                "codes_postaux": codes_postaux,
+                "codes_postaux": list(codes_postaux),
             }
             save_filters(saved_filters)
             st.success(f"Filtre '{new_filter_name}' sauvegardé !")
@@ -119,14 +119,28 @@ else:
         selected_codes_postaux=codes_postaux,
     )
 
-    # Afficher la carte avec Streamlit
+    # Afficher la carte avec Streamlit et gérer les événements
     map_data = st_folium(m, width=700, height=500)
 
-    # Gérer les clics sur la carte pour ajouter des codes postaux
+    # Si une zone a été dessinée, extraire le code postal
     if map_data.get("last_active_drawing"):
-        st.write("Zone sélectionnée :", map_data["last_active_drawing"])
-        # Ici, tu peux ajouter une logique pour extraire le code postal de la zone cliquée
-        # et l'ajouter à la liste `codes_postaux`.
+        geojson = map_data["last_active_drawing"]
+        postal_code = extract_postal_codes_from_geojson(geojson)
+        if postal_code and postal_code not in codes_postaux:
+            st.session_state.codes_postaux = list(codes_postaux) + [postal_code]
+            st.experimental_rerun()
+
+    # Si un clic a été détecté, extraire le code postal
+    if map_data.get("last_clicked"):
+        lat, lon = map_data["last_clicked"]["lat"], map_data["last_clicked"]["lng"]
+        postal_code = reverse_geocode(lat, lon)
+        if postal_code and postal_code not in codes_postaux:
+            st.session_state.codes_postaux = list(codes_postaux) + [postal_code]
+            st.experimental_rerun()
+
+# Mise à jour des codes postaux après un clic ou un dessin
+if "codes_postaux" in st.session_state:
+    codes_postaux = st.session_state.codes_postaux
 
 # Pied de page
 st.markdown("---")
