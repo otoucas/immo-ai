@@ -4,4 +4,4 @@ streamlit==1.28.0
 streamlit-folium==0.11.0
 requests==2.31.0
 pandas==2.0.3
-geopandas==0.13.2
+#suppression de geopandas==0.13.2
