@@ -50,7 +50,7 @@ with st.sidebar:
     st.subheader("Étiquettes DPE")
     dpe_options = ["A", "B", "C", "D", "E", "F", "G"]
     for option in dpe_options:
-        if st.checkbox(f"{option}", value=option in st.session_state.dpe_filter):
+        if st.checkbox(f"{option}", value=option in st.session_state.dpe_filter, key=f"dpe_{option}"):
             if option not in st.session_state.dpe_filter:
                 st.session_state.dpe_filter.append(option)
         else:
@@ -59,7 +59,7 @@ with st.sidebar:
 
     st.subheader("Étiquettes GES")
     for option in dpe_options:
-        if st.checkbox(f"{option}", value=option in st.session_state.ges_filter):
+        if st.checkbox(f"{option}", value=option in st.session_state.ges_filter, key=f"ges_{option}"):
             if option not in st.session_state.ges_filter:
                 st.session_state.ges_filter.append(option)
         else:
@@ -107,7 +107,7 @@ if saved_filters:
     st.sidebar.markdown("---")
     st.sidebar.subheader("🗑️ Supprimer un filtre")
     for filter_name in saved_filters.keys():
-        if st.sidebar.button(f"Supprimer {filter_name}"):
+        if st.sidebar.button(f"Supprimer {filter_name}", key=f"delete_{filter_name}"):
             if delete_filter(filter_name):
                 st.sidebar.success(f"Filtre '{filter_name}' supprimé !")
                 st.experimental_rerun()
@@ -136,7 +136,7 @@ else:
     # Afficher la carte (avec une clé pour forcer le rafraîchissement)
     st.subheader("🗺️ Carte interactive")
     m = create_map(records, show_cadastral=show_cadastral)
-    map_data = st_folium(m, width=700, height=500, key=f"map_{len(records)}")  # Clé unique pour forcer le rafraîchissement
+    map_data = st_folium(m, width=700, height=500, key=f"map_{len(records)}")
 
     # Gérer les clics pour ajouter des codes postaux
     if map_data.get("last_clicked"):
