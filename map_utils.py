@@ -1,6 +1,5 @@
 import folium
 import requests
-from api_dvf import get_last_sale_price
 from streamlit_folium import st_folium
 from folium.plugins import Draw
 
@@ -16,20 +15,18 @@ def reverse_geocode(lat, lon):
         print(f"Erreur lors du reverse geocoding: {e}")
     return None
 
-def create_map(df, show_cadastral=False, selected_codes_postaux=[]):
-    """Crée une carte avec folium (sans leafmap)."""
+def create_map(df, show_cadastral=False):
+    """Crée une carte avec folium (ultra-léger)."""
     m = folium.Map(location=[46, 2], zoom_start=6, tiles="OpenStreetMap")
 
     # Ajouter les marqueurs pour chaque bien
     for _, row in df.iterrows():
         if pd.notna(row.get("latitude")) and pd.notna(row.get("longitude")):
-            last_sale = get_last_sale_price(row.get("code_postal_ban", ""), row.get("adresse_ban", ""))
             popup = f"""
             <b>Adresse:</b> {row.get('adresse_ban', 'N/A')} <br>
             <b>DPE:</b> {row.get('etiquette_dpe', 'N/A')} <br>
             <b>GES:</b> {row.get('etiquette_ges', 'N/A')} <br>
             <b>Surface:</b> {row.get('surface_habitable_logement', 'N/A')} m² <br>
-            <b>Dernier prix de vente:</b> {last_sale} € <br>
             """
             folium.Marker(
                 location=[row["latitude"], row["longitude"]],
