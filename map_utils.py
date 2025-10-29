@@ -5,25 +5,20 @@ from api_dvf import get_last_sale_price
 from streamlit_folium import st_folium
 from folium.plugins import Draw
 
-def get_communes_geojson(code_postal):
-    """Récupère les limites communales pour un code postal donné (via Nominatim)."""
-    url = f"https://nominatim.openstreetmap.org/search?postalcode={code_postal}&country=France&format=geojson&polygon_geojson=1"
-    response = requests.get(url, headers={"User-Agent": "immo-ai/1.0"})
-    if response.status_code == 200:
-        return response.json()
-    return None
-
 def reverse_geocode(lat, lon):
     """Récupère le code postal à partir de coordonnées (lat, lon) via Nominatim."""
     url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json&addressdetails=1"
-    response = requests.get(url, headers={"User-Agent": "immo-ai/1.0"})
-    if response.status_code == 200:
-        data = response.json()
-        return data.get("address", {}).get("postcode")
+    try:
+        response = requests.get(url, headers={"User-Agent": "immo-ai/1.0"}, timeout=5)
+        if response.status_code == 200:
+            data = response.json()
+            return data.get("address", {}).get("postcode")
+    except Exception as e:
+        print(f"Erreur lors du reverse geocoding: {e}")
     return None
 
-def create_map(df, show_cadastral=False, show_communes=False, selected_codes_postaux=[]):
-    """Crée une carte avec marqueurs, parcelles cadastrales, et limites communales."""
+def create_map(df, show_cadastral=False, selected_codes_postaux=[]):
+    """Crée une carte avec marqueurs et parcelles cadastrales (sans geopandas)."""
     m = leafmap.Map(center=[46, 2], zoom=6)
     m.add_basemap("SATELLITE")
 
@@ -43,7 +38,7 @@ def create_map(df, show_cadastral=False, show_communes=False, selected_codes_pos
                 popup=popup,
             ).add_to(m)
 
-    # Ajouter les parcelles cadastrales
+    # Ajouter les parcelles cadastrales (WMS IGN)
     if show_cadastral:
         cadastral_url = "https://wxs.ign.fr/cadastre/geoportail/wms"
         m.add_wms_layer(
@@ -53,17 +48,6 @@ def create_map(df, show_cadastral=False, show_communes=False, selected_codes_pos
             format="image/png",
             transparent=True,
         )
-
-    # Ajouter les limites communales
-    if show_communes and selected_codes_postaux:
-        for code in selected_codes_postaux:
-            geojson = get_communes_geojson(code)
-            if geojson:
-                folium.GeoJson(
-                    geojson,
-                    name=f"Limites communales ({code})",
-                    style_function=lambda x: {"color": "red", "weight": 2, "fillOpacity": 0},
-                ).add_to(m)
 
     # Ajouter un outil de dessin pour sélectionner des zones
     Draw(
@@ -80,11 +64,6 @@ def create_map(df, show_cadastral=False, show_communes=False, selected_codes_pos
 
     return m
 
-def extract_postal_codes_from_geojson(geojson):
-    """Extrait les codes postaux depuis un GeoJSON (zone dessinée)."""
-    if geojson["geometry"]["type"] == "Polygon":
-        coords = geojson["geometry"]["coordinates"][0]
-        centroid_lat = sum([c[1] for c in coords]) / len(coords)
-        centroid_lon = sum([c[0] for c in coords]) / len(coords)
-        return reverse_geocode(centroid_lat, centroid_lon)
-    return None
+def extract_postal_codes_from_click(lat, lon):
+    """Extrait le code postal depuis un clic sur la carte."""
+    return reverse_geocode(lat, lon)
