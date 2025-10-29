@@ -1,4 +1,3 @@
-import leafmap
 import folium
 import requests
 from api_dvf import get_last_sale_price
@@ -18,9 +17,8 @@ def reverse_geocode(lat, lon):
     return None
 
 def create_map(df, show_cadastral=False, selected_codes_postaux=[]):
-    """Crée une carte avec marqueurs et parcelles cadastrales (version légère)."""
-    m = leafmap.Map(center=[46, 2], zoom=6)
-    m.add_basemap("SATELLITE")
+    """Crée une carte avec folium (sans leafmap)."""
+    m = folium.Map(location=[46, 2], zoom_start=6, tiles="OpenStreetMap")
 
     # Ajouter les marqueurs pour chaque bien
     for _, row in df.iterrows():
@@ -41,13 +39,13 @@ def create_map(df, show_cadastral=False, selected_codes_postaux=[]):
     # Ajouter les parcelles cadastrales (WMS IGN)
     if show_cadastral:
         cadastral_url = "https://wxs.ign.fr/cadastre/geoportail/wms"
-        m.add_wms_layer(
+        folium.WmsTileLayer(
             url=cadastral_url,
             layers="CADASTRALPARCELLES",
             name="Parcelles cadastrales",
-            format="image/png",
+            fmt="image/png",
             transparent=True,
-        )
+        ).add_to(m)
 
     # Ajouter un outil de dessin pour sélectionner des zones
     Draw(
