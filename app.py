@@ -1,9 +1,7 @@
 import streamlit as st
 from api_ademe import fetch_dpe_data
-from api_dvf import get_last_sale_price
 from map_utils import create_map, extract_postal_codes_from_click
 from filter_utils import load_filters, save_filters, delete_filter
-import pandas as pd
 
 # Configuration de la page
 st.set_page_config(layout="wide")
@@ -92,27 +90,27 @@ st.sidebar.markdown(f"""
 
 # Récupérer les données DPE/GES
 with st.spinner("Chargement des données..."):
-    df = pd.DataFrame()
+    data = []
     for code in st.session_state.codes_postaux:
-        df_code = fetch_dpe_data(
+        data.extend(fetch_dpe_data(
             etiquette_dpe=",".join(dpe_filter),
             etiquette_ges=",".join(ges_filter),
             surface_min=surface_range[0],
             surface_max=surface_range[1],
             code_postal=code,
-        )
-        df = pd.concat([df, df_code], ignore_index=True)
+        ))
 
 # Afficher les résultats
 st.subheader("📊 Résultats")
-if df.empty:
+if not data:
     st.warning("Aucun résultat trouvé.")
 else:
-    st.dataframe(df, use_container_width=True)
+    # Afficher les données sous forme de tableau (sans pandas)
+    st.table(data)
 
     # Afficher la carte
     st.subheader("🗺️ Carte interactive")
-    m = create_map(df, show_cadastral=show_cadastral)
+    m = create_map(data, show_cadastral=show_cadastral)
 
     # Afficher la carte avec Streamlit et gérer les clics
     map_data = st_folium(m, width=700, height=500)
