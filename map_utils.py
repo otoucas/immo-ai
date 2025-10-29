@@ -6,7 +6,7 @@ from streamlit_folium import st_folium
 from folium.plugins import Draw
 
 def reverse_geocode(lat, lon):
-    """Récupère le code postal à partir de coordonnées (lat, lon) via Nominatim."""
+    """Récupère le code postal depuis des coordonnées (lat, lon) via Nominatim."""
     url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json&addressdetails=1"
     try:
         response = requests.get(url, headers={"User-Agent": "immo-ai/1.0"}, timeout=5)
@@ -18,7 +18,7 @@ def reverse_geocode(lat, lon):
     return None
 
 def create_map(df, show_cadastral=False, selected_codes_postaux=[]):
-    """Crée une carte avec marqueurs et parcelles cadastrales (sans geopandas)."""
+    """Crée une carte avec marqueurs et parcelles cadastrales (version légère)."""
     m = leafmap.Map(center=[46, 2], zoom=6)
     m.add_basemap("SATELLITE")
 
