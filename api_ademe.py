@@ -12,7 +12,7 @@ def fetch_dpe_data(etiquette_dpe="D", etiquette_ges="D", surface_min=210, surfac
         "surface_habitable_logement_lte": surface_max,
         "code_postal_ban_starts": code_postal,
         "sort": "-surface_habitable_logement",
-        "rows": 1000,
+        "rows": 100,
     }
 
     try:
@@ -22,6 +22,6 @@ def fetch_dpe_data(etiquette_dpe="D", etiquette_ges="D", surface_min=210, surfac
         records = data.get("records", [])
         df = pd.DataFrame([r["fields"] for r in records])
         return df
-    except requests.exceptions.RequestException as e:
-        print(f"Erreur lors de la récupération des données: {e}")
+    except Exception as e:
+        print(f"Erreur lors de la récupération des données DPE: {e}")
         return pd.DataFrame()
