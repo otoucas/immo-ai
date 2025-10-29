@@ -6,7 +6,7 @@ import pandas as pd
 
 # Configuration de la page
 st.set_page_config(layout="wide")
-st.title("🏡 Recherche immobilière avancée")
+st.title("🏡 Recherche immobilière ultra-légère")
 
 # Initialiser les codes postaux dans session_state
 if "codes_postaux" not in st.session_state:
@@ -89,22 +89,18 @@ st.sidebar.markdown(f"""
 - **Codes postaux:** {', '.join(st.session_state.codes_postaux)}
 """)
 
-# Récupérer les données DPE/GES (avec un timeout pour éviter les blocages)
-try:
-    with st.spinner("Chargement des données..."):
-        df = pd.DataFrame()
-        for code in st.session_state.codes_postaux:
-            df_code = fetch_dpe_data(
-                etiquette_dpe=",".join(dpe_filter),
-                etiquette_ges=",".join(ges_filter),
-                surface_min=surface_range[0],
-                surface_max=surface_range[1],
-                code_postal=code,
-            )
-            df = pd.concat([df, df_code], ignore_index=True)
-except Exception as e:
-    st.error(f"Erreur lors du chargement des données: {e}")
+# Récupérer les données DPE/GES
+with st.spinner("Chargement des données..."):
     df = pd.DataFrame()
+    for code in st.session_state.codes_postaux:
+        df_code = fetch_dpe_data(
+            etiquette_dpe=",".join(dpe_filter),
+            etiquette_ges=",".join(ges_filter),
+            surface_min=surface_range[0],
+            surface_max=surface_range[1],
+            code_postal=code,
+        )
+        df = pd.concat([df, df_code], ignore_index=True)
 
 # Afficher les résultats
 st.subheader("📊 Résultats")
@@ -115,7 +111,7 @@ else:
 
     # Afficher la carte
     st.subheader("🗺️ Carte interactive")
-    m = create_map(df, show_cadastral=show_cadastral, selected_codes_postaux=st.session_state.codes_postaux)
+    m = create_map(df, show_cadastral=show_cadastral)
 
     # Afficher la carte avec Streamlit et gérer les clics
     map_data = st_folium(m, width=700, height=500)
@@ -131,4 +127,4 @@ else:
 
 # Pied de page
 st.markdown("---")
-st.caption("Données : ADEME (DPE/GES) & DVF (Prix) | Cadastral : IGN")
+st.caption("Données : ADEME (DPE/GES) | Cadastral : IGN")
