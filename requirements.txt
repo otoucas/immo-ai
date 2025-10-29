@@ -1,4 +1,4 @@
-leafmap==0.27.0
+#leafmap==0.27.0
 #leafmap==0.46.0
 folium==0.14.0
 streamlit==1.28.0
