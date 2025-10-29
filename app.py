@@ -1,6 +1,6 @@
 import streamlit as st
 from api_ademe import fetch_dpe_data
-from map_utils import create_map, reverse_geocode
+from map_utils import create_map, extract_postal_codes_from_click
 from filter_utils import load_filters, save_filters, delete_filter
 import pandas as pd
 
@@ -56,7 +56,6 @@ with st.sidebar:
 
     # Options d'affichage
     show_cadastral = st.checkbox("Afficher les parcelles cadastrales", value=True)
-    show_communes = st.checkbox("Afficher les limites communales", value=True)
 
     # Sauvegarder ou supprimer un filtre
     new_filter_name = st.text_input("Nom du filtre (pour sauvegarder)")
@@ -90,18 +89,22 @@ st.sidebar.markdown(f"""
 - **Codes postaux:** {', '.join(st.session_state.codes_postaux)}
 """)
 
-# Récupérer les données DPE/GES
-with st.spinner("Chargement des données..."):
+# Récupérer les données DPE/GES (avec un timeout pour éviter les blocages)
+try:
+    with st.spinner("Chargement des données..."):
+        df = pd.DataFrame()
+        for code in st.session_state.codes_postaux:
+            df_code = fetch_dpe_data(
+                etiquette_dpe=",".join(dpe_filter),
+                etiquette_ges=",".join(ges_filter),
+                surface_min=surface_range[0],
+                surface_max=surface_range[1],
+                code_postal=code,
+            )
+            df = pd.concat([df, df_code], ignore_index=True)
+except Exception as e:
+    st.error(f"Erreur lors du chargement des données: {e}")
     df = pd.DataFrame()
-    for code in st.session_state.codes_postaux:
-        df_code = fetch_dpe_data(
-            etiquette_dpe=",".join(dpe_filter),
-            etiquette_ges=",".join(ges_filter),
-            surface_min=surface_range[0],
-            surface_max=surface_range[1],
-            code_postal=code,
-        )
-        df = pd.concat([df, df_code], ignore_index=True)
 
 # Afficher les résultats
 st.subheader("📊 Résultats")
@@ -112,12 +115,7 @@ else:
 
     # Afficher la carte
     st.subheader("🗺️ Carte interactive")
-    m = create_map(
-        df,
-        show_cadastral=show_cadastral,
-        show_communes=show_communes,
-        selected_codes_postaux=st.session_state.codes_postaux,
-    )
+    m = create_map(df, show_cadastral=show_cadastral, selected_codes_postaux=st.session_state.codes_postaux)
 
     # Afficher la carte avec Streamlit et gérer les clics
     map_data = st_folium(m, width=700, height=500)
@@ -126,11 +124,11 @@ else:
     if map_data.get("last_clicked"):
         lat = map_data["last_clicked"]["lat"]
         lon = map_data["last_clicked"]["lng"]
-        postal_code = reverse_geocode(lat, lon)
+        postal_code = extract_postal_codes_from_click(lat, lon)
         if postal_code and postal_code not in st.session_state.codes_postaux:
             st.session_state.codes_postaux = list(st.session_state.codes_postaux) + [postal_code]
             st.experimental_rerun()
 
 # Pied de page
 st.markdown("---")
-st.caption("Données : ADEME (DPE/GES), DVF (Prix), IGN (Cadastral/Communes)")
+st.caption("Données : ADEME (DPE/GES) & DVF (Prix) | Cadastral : IGN")
