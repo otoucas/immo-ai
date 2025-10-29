@@ -16,7 +16,7 @@ def reverse_geocode(lat, lon):
     return None
 
 def create_map(df, show_cadastral=False):
-    """Crée une carte avec folium (ultra-léger)."""
+    """Crée une carte ultra-légère avec folium."""
     m = folium.Map(location=[46, 2], zoom_start=6, tiles="OpenStreetMap")
 
     # Ajouter les marqueurs pour chaque bien
@@ -27,6 +27,7 @@ def create_map(df, show_cadastral=False):
             <b>DPE:</b> {row.get('etiquette_dpe', 'N/A')} <br>
             <b>GES:</b> {row.get('etiquette_ges', 'N/A')} <br>
             <b>Surface:</b> {row.get('surface_habitable_logement', 'N/A')} m² <br>
+            <b>Dernier prix de vente:</b> {get_last_sale_price(row.get('code_postal_ban', ''), row.get('adresse_ban', ''))} <br>
             """
             folium.Marker(
                 location=[row["latitude"], row["longitude"]],
