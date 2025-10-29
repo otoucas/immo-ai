@@ -15,22 +15,21 @@ def reverse_geocode(lat, lon):
         print(f"Erreur lors du reverse geocoding: {e}")
     return None
 
-def create_map(df, show_cadastral=False):
-    """Crée une carte ultra-légère avec folium."""
+def create_map(data, show_cadastral=False):
+    """Crée une carte ultra-légère avec folium (sans pandas)."""
     m = folium.Map(location=[46, 2], zoom_start=6, tiles="OpenStreetMap")
 
     # Ajouter les marqueurs pour chaque bien
-    for _, row in df.iterrows():
-        if pd.notna(row.get("latitude")) and pd.notna(row.get("longitude")):
+    for item in data:
+        if "latitude" in item and "longitude" in item:
             popup = f"""
-            <b>Adresse:</b> {row.get('adresse_ban', 'N/A')} <br>
-            <b>DPE:</b> {row.get('etiquette_dpe', 'N/A')} <br>
-            <b>GES:</b> {row.get('etiquette_ges', 'N/A')} <br>
-            <b>Surface:</b> {row.get('surface_habitable_logement', 'N/A')} m² <br>
-            <b>Dernier prix de vente:</b> {get_last_sale_price(row.get('code_postal_ban', ''), row.get('adresse_ban', ''))} <br>
+            <b>Adresse:</b> {item.get('adresse_ban', 'N/A')} <br>
+            <b>DPE:</b> {item.get('etiquette_dpe', 'N/A')} <br>
+            <b>GES:</b> {item.get('etiquette_ges', 'N/A')} <br>
+            <b>Surface:</b> {item.get('surface_habitable_logement', 'N/A')} m² <br>
             """
             folium.Marker(
-                location=[row["latitude"], row["longitude"]],
+                location=[item["latitude"], item["longitude"]],
                 popup=popup,
             ).add_to(m)
 
