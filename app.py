@@ -1,5 +1,6 @@
 import streamlit as st
 from api_ademe import fetch_dpe_data
+from api_dvf import get_last_sale_price
 from map_utils import create_map, extract_postal_codes_from_click
 from filter_utils import load_filters, save_filters, delete_filter
 import pandas as pd
