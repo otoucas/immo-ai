@@ -90,9 +90,9 @@ st.sidebar.markdown(f"""
 
 # Récupérer les données DPE/GES
 with st.spinner("Chargement des données..."):
-    data = []
+    records = []
     for code in st.session_state.codes_postaux:
-        data.extend(fetch_dpe_data(
+        records.extend(fetch_dpe_data(
             etiquette_dpe=",".join(dpe_filter),
             etiquette_ges=",".join(ges_filter),
             surface_min=surface_range[0],
@@ -102,15 +102,15 @@ with st.spinner("Chargement des données..."):
 
 # Afficher les résultats
 st.subheader("📊 Résultats")
-if not data:
+if not records:
     st.warning("Aucun résultat trouvé.")
 else:
     # Afficher les données sous forme de tableau (sans pandas)
-    st.table(data)
+    st.json(records)  # Affiche les données sous forme de JSON (lisible et interactif)
 
     # Afficher la carte
     st.subheader("🗺️ Carte interactive")
-    m = create_map(data, show_cadastral=show_cadastral)
+    m = create_map(records, show_cadastral=show_cadastral)
 
     # Afficher la carte avec Streamlit et gérer les clics
     map_data = st_folium(m, width=700, height=500)
