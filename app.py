@@ -73,6 +73,24 @@ with st.sidebar:
     with col2:
         surface_max = st.number_input("Surface max (m²)", min_value=0, value=current_filter.get("surface_max", 500))
 
+    # Champ pour ajouter des codes postaux
+    st.subheader("Codes postaux / Départements")
+    new_code = st.text_input("Ajouter un code postal ou département", placeholder="Ex: 75, 75001, 13...")
+    if st.button("Ajouter"):
+        if new_code and new_code not in st.session_state.codes_postaux:
+            st.session_state.codes_postaux.append(new_code)
+
+    # Afficher les codes postaux actuels (avec possibilité de suppression)
+    st.subheader("Codes postaux sélectionnés")
+    for i, code in enumerate(st.session_state.codes_postaux):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            st.write(code)
+        with col2:
+            if st.button("❌", key=f"delete_code_{i}"):
+                st.session_state.codes_postaux.pop(i)
+                st.experimental_rerun()
+
     # Options d'affichage (parcelles décochées par défaut)
     show_cadastral = st.checkbox("Afficher les parcelles cadastrales", value=False)
 
@@ -133,7 +151,7 @@ if not records:
 else:
     st.json(records)  # Affiche les données sous forme de JSON
 
-    # Afficher la carte (avec une clé pour forcer le rafraîchissement)
+    # Afficher la carte (toujours visible, même vide)
     st.subheader("🗺️ Carte interactive")
     m = create_map(records, show_cadastral=show_cadastral)
     map_data = st_folium(m, width=700, height=500, key=f"map_{len(records)}")
@@ -144,7 +162,7 @@ else:
         lon = map_data["last_clicked"]["lng"]
         postal_code = extract_postal_codes_from_click(lat, lon)
         if postal_code and postal_code not in st.session_state.codes_postaux:
-            st.session_state.codes_postaux = list(st.session_state.codes_postaux) + [postal_code]
+            st.session_state.codes_postaux.append(postal_code)
             st.experimental_rerun()
 
 # Pied de page
