@@ -16,7 +16,7 @@ def reverse_geocode(lat, lon):
     return None
 
 def create_map(records, show_cadastral=False):
-    """Crée une carte avec folium (sans pandas)."""
+    """Crée une carte avec folium (toujours visible)."""
     m = folium.Map(location=[46, 2], zoom_start=6, tiles="OpenStreetMap")
 
     # Ajouter les marqueurs pour chaque bien
