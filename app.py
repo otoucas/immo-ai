@@ -7,9 +7,9 @@ from filter_utils import load_filters, save_filters, delete_filter
 st.set_page_config(layout="wide")
 st.title("🏡 Recherche immobilière ultra-légère")
 
-# Initialiser les codes postaux et les filtres dans session_state
+# Initialiser les variables de session
 if "codes_postaux" not in st.session_state:
-    st.session_state.codes_postaux = ["01"]
+    st.session_state.codes_postaux = ["75001"]  # Exemple avec un code postal par défaut
 if "dpe_filter" not in st.session_state:
     st.session_state.dpe_filter = []
 if "ges_filter" not in st.session_state:
@@ -30,7 +30,7 @@ with st.sidebar:
 
     if filter_name != "Nouveau filtre":
         current_filter = saved_filters[filter_name]
-        st.session_state.codes_postaux = current_filter.get("codes_postaux", ["01"])
+        st.session_state.codes_postaux = current_filter.get("codes_postaux", ["75001"])
         st.session_state.dpe_filter = current_filter.get("dpe", [])
         st.session_state.ges_filter = current_filter.get("ges", [])
         surface_min = current_filter.get("surface_min", 0)
@@ -46,7 +46,7 @@ with st.sidebar:
         surface_min = 0
         surface_max = 500
 
-    # Filtres interactifs (cases à cocher pour DPE/GES)
+    # Filtres DPE/GES (cases à cocher)
     st.subheader("Étiquettes DPE")
     dpe_options = ["A", "B", "C", "D", "E", "F", "G"]
     for option in dpe_options:
@@ -66,7 +66,7 @@ with st.sidebar:
             if option in st.session_state.ges_filter:
                 st.session_state.ges_filter.remove(option)
 
-    # Champs pour la surface (min et max)
+    # Champs pour la surface (min/max)
     col1, col2 = st.columns(2)
     with col1:
         surface_min = st.number_input("Surface min (m²)", min_value=0, value=current_filter.get("surface_min", 0))
@@ -75,12 +75,12 @@ with st.sidebar:
 
     # Champ pour ajouter des codes postaux
     st.subheader("Codes postaux / Départements")
-    new_code = st.text_input("Ajouter un code postal ou département", placeholder="Ex: 75, 75001, 13...")
+    new_code = st.text_input("Ajouter un code postal ou département", placeholder="Ex: 75001, 13000...")
     if st.button("Ajouter"):
         if new_code and new_code not in st.session_state.codes_postaux:
             st.session_state.codes_postaux.append(new_code)
 
-    # Afficher les codes postaux actuels (avec possibilité de suppression)
+    # Afficher les codes postaux actuels (avec suppression)
     st.subheader("Codes postaux sélectionnés")
     for i, code in enumerate(st.session_state.codes_postaux):
         col1, col2 = st.columns([4, 1])
@@ -91,10 +91,10 @@ with st.sidebar:
                 st.session_state.codes_postaux.pop(i)
                 st.experimental_rerun()
 
-    # Options d'affichage (parcelles décochées par défaut)
+    # Option pour afficher les parcelles cadastrales (désactivée par défaut)
     show_cadastral = st.checkbox("Afficher les parcelles cadastrales", value=False)
 
-    # Sauvegarder ou supprimer un filtre
+    # Sauvegarde des filtres
     new_filter_name = st.text_input("Nom du filtre (pour sauvegarder)")
     if st.button("Sauvegarder le filtre"):
         if new_filter_name:
@@ -110,7 +110,7 @@ with st.sidebar:
         else:
             st.error("Veuillez donner un nom au filtre.")
 
-# Affichage des filtres en cours et suppression
+# Affichage des filtres actifs
 st.sidebar.markdown("---")
 st.sidebar.subheader("⚙️ Filtres actifs")
 st.sidebar.markdown(f"""
@@ -120,19 +120,19 @@ st.sidebar.markdown(f"""
 - **Codes postaux:** {', '.join(st.session_state.codes_postaux)}
 """)
 
-# Suppression des filtres depuis la zone d'affichage
+# Suppression des filtres sauvegardés
 if saved_filters:
     st.sidebar.markdown("---")
     st.sidebar.subheader("🗑️ Supprimer un filtre")
     for filter_name in saved_filters.keys():
-        if st.sidebar.button(f"Supprimer {filter_name}", key=f"delete_{filter_name}"):
+        if st.sidebar.button(f"Supprimer {filter_name}", key=f"delete_filter_{filter_name}"):
             if delete_filter(filter_name):
                 st.sidebar.success(f"Filtre '{filter_name}' supprimé !")
                 st.experimental_rerun()
             else:
                 st.sidebar.error("Erreur lors de la suppression.")
 
-# Récupérer les données DPE/GES
+# Récupération des données
 with st.spinner("Chargement des données..."):
     records = []
     for code in st.session_state.codes_postaux:
@@ -144,26 +144,35 @@ with st.spinner("Chargement des données..."):
             code_postal=code,
         ))
 
-# Afficher les résultats
+# Affichage des résultats
 st.subheader("📊 Résultats")
 if not records:
-    st.warning("Aucun résultat trouvé.")
+    st.warning("Aucun résultat trouvé pour les filtres actuels.")
 else:
-    st.json(records)  # Affiche les données sous forme de JSON
+    st.json(records)  # Affichage des données en JSON
 
-    # Afficher la carte (toujours visible, même vide)
-    st.subheader("🗺️ Carte interactive")
-    m = create_map(records, show_cadastral=show_cadastral)
-    map_data = st_folium(m, width=700, height=500, key=f"map_{len(records)}")
+# --- CARTE (toujours affichée) ---
+st.subheader("🗺️ Carte interactive")
 
-    # Gérer les clics pour ajouter des codes postaux
-    if map_data.get("last_clicked"):
-        lat = map_data["last_clicked"]["lat"]
-        lon = map_data["last_clicked"]["lng"]
-        postal_code = extract_postal_codes_from_click(lat, lon)
-        if postal_code and postal_code not in st.session_state.codes_postaux:
-            st.session_state.codes_postaux.append(postal_code)
-            st.experimental_rerun()
+# Créer une carte par défaut centrée sur la France (même si aucune donnée)
+m = create_map(records, show_cadastral=show_cadastral)
+
+# Afficher la carte avec une clé unique pour forcer le rafraîchissement
+map_data = st_folium(
+    m,
+    width=700,
+    height=500,
+    key=f"map_{len(records)}_{show_cadastral}"  # Clé unique combinant le nombre de résultats et l'état des parcelles
+)
+
+# Gestion des clics sur la carte
+if map_data and map_data.get("last_clicked"):
+    lat = map_data["last_clicked"]["lat"]
+    lon = map_data["last_clicked"]["lng"]
+    postal_code = extract_postal_codes_from_click(lat, lon)
+    if postal_code and postal_code not in st.session_state.codes_postaux:
+        st.session_state.codes_postaux.append(postal_code)
+        st.experimental_rerun()
 
 # Pied de page
 st.markdown("---")
